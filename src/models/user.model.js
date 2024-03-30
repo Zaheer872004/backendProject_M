@@ -117,10 +117,5 @@ userSchema.methods.generateRefreshToken = async function(){
     )
 }
 
- 
-
-
-
-
 
 export const User = mongoose.model("User",userSchema)
