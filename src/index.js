@@ -1,14 +1,14 @@
 import dotenv from 'dotenv'
 import  connectDB from './db/index.js'
-import {app} from './app.js'
-dotenv.config({
-    path : './.env'
-})
+import { app } from './app.js'
+dotenv.config()
+
+    
 
 
 connectDB()
 .then(() => {
-    app.on((error) => {
+    app.on("error",(error) => {
         console.log(`Something went wrong in express app`);
         throw error
     })
