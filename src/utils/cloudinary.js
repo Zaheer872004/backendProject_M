@@ -18,12 +18,12 @@ const uploadOnCloudinary = async (localFilePath) =>{
         })
         
         // file has been uploaded successfully
-        
+        fs.unlinkedSync(localFilePath)
         console.log(`File is uploaded on cloudinary`,response,response.url);
         return response;
     } catch (error) {
         // if here get error means in our server have file/videos but not uploadded on cloudinary so that unliked(deleted from server for unjumbled)
-        // fs.unlinkedSync(localFilePath) // remove the locally saved temporary file as the upload operation got failed 
+         fs.unlinkedSync(localFilePath) // remove the locally saved temporary file as the upload operation got failed 
         return null;        
     }
 }
