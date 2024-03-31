@@ -1,5 +1,5 @@
-import {v2 as cloudinary} from 'cloudinary';
 import fs from 'fs'
+import { v2 as cloudinary } from 'cloudinary';
 
 cloudinary.config({ 
   cloud_name:process.env.CLOUDINARY_CLOUD_NAME, 
@@ -10,7 +10,7 @@ cloudinary.config({
 const uploadOnCloudinary = async (localFilePath) =>{
     try {
         
-        if(!localFilePath) return null
+        if(!localFilePath) return null;
         // upload the file on cloudinary
         
         const response = await cloudinary.uploader.upload(localFilePath, {
@@ -23,7 +23,7 @@ const uploadOnCloudinary = async (localFilePath) =>{
         return response;
     } catch (error) {
         // if here get error means in our server have file/videos but not uploadded on cloudinary so that unliked(deleted from server for unjumbled)
-        fs.unlinkedSync(localFilePath) // remove the locally saved temporary file as the upload operation got failed 
+        // fs.unlinkedSync(localFilePath) // remove the locally saved temporary file as the upload operation got failed 
         return null;        
     }
 }
