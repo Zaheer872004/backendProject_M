@@ -179,22 +179,28 @@ const userLogout = asyncHandler( async (req,res)=>{
 
     // first of all user have to  already login how to take the user._id
 
-    // const user = req.user;  we make the custom middleware
+     //const user = req.user;  // we make the custom middleware
 
-    const newUser = await User.findByIdAndUpdate(req.user._id,{
-        $unset : {
-            refreshToken : 1
+    const newUser = await User.findByIdAndUpdate(req.user._id,
+        {
+            $unset : {
+                refreshToken : ""
+            }
+        },
+        {
+            new : true
         }
-    },
-    {
-        new : true
-    }
     );
 
-    return req
+    if(!newUser){
+        throw new ApiError(400, "Unauthenticated user")
+
+    }
+
+    return res
     .status(200)
-    .cookie("accessToken", "",Option)
-    .cookie("refreshToken","",Option)
+    .cookie("accessToken", "",option)
+    .cookie("refreshToken","",option)
     .json(
         new ApiResponse(200,"",`User successfully LoggedOut`)
     )
