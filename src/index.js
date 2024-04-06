@@ -5,6 +5,7 @@ dotenv.config({
     path: './.env'
 })
 
+const PORT = process.env.PORT;
     
 
 
@@ -14,8 +15,8 @@ connectDB()
         console.log(`Something went wrong in express app`);
         throw error
     })
-    app.listen(process.env.PORT || 4000, ()=>{
-        console.log(`Server started at http://localhost:${process.env.PORT}`);
+    app.listen( PORT || 4000, ()=>{
+        console.log(`Server started at http://localhost:${ PORT }`);
     })
 })
 .catch((error) => {

@@ -10,7 +10,10 @@ cloudinary.config({
 const uploadOnCloudinary = async (localFilePath) =>{
     try {
         
-        if(!localFilePath) return null;
+        if(!localFilePath) {
+            console.log("not able to get the localfilePath");
+            return null;
+        }
         // upload the file on cloudinary
         
         const response = await cloudinary.uploader.upload(localFilePath, {
@@ -18,12 +21,13 @@ const uploadOnCloudinary = async (localFilePath) =>{
         })
         
         // file has been uploaded successfully
-        
+        // fs.unlinkSync(localFilePath)
         console.log(`File is uploaded on cloudinary`,response,response.url);
         return response;
     } catch (error) {
         // if here get error means in our server have file/videos but not uploadded on cloudinary so that unliked(deleted from server for unjumbled)
-        // fs.unlinkedSync(localFilePath) // remove the locally saved temporary file as the upload operation got failed 
+        console.log("unable to upload the file in the cloudin");
+        fs.unlinkSync(localFilePath) // remove the locally saved temporary file as the upload operation got failed 
         return null;        
     }
 }

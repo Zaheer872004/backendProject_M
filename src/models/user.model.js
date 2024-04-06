@@ -17,10 +17,10 @@ const userSchema = new Schema({
         type : String,
         required : true,
         unique : true,
-        // validate :{
-        //     validator : validator.isEmail,
-        //     message : `Please provide a valide email`
-        // },
+        validate :{
+            validator : validator.isEmail,
+            message : `Please provide a valide email`
+        },
         lowercase : true,
         trim : true,
     },
@@ -48,33 +48,33 @@ const userSchema = new Schema({
     password : {
         type : String,
         required : [true, `Password is required min length 6 character`],
-    //     validate : {
-    //         validator : function(v) {
-    //             // check from min 6 length
-    //             if( v.length < 6){
-    //                 return false;
-    //             }
-    //             // check for at least one specail character
-    //             const specialChars = /[!@#$%^&*(),.?":{}|<>]/g;
-    //             if(!specialChars.test(v)){
-    //                 return false;
-    //             }
-    //             return true;
-    //         },
-    //         message : `Password must be at least 6 characters long and ne special character`
-    //     },
+        validate : {
+            validator : function(v) {
+                // check from min 6 length
+                if( v.length < 6){
+                    return false;
+                }
+                // check for at least one specail character
+                const specialChars = /[!@#$%^&*(),.?":{}|<>]/g;
+                if(!specialChars.test(v)){
+                    return false;
+                }
+                return true;
+            },
+            message : `Password must be at least 6 characters long and ne special character`
+        },
     },
     refreshToken : {
-        type : String,
+        type : String
     }
 
 },{timestamps : true})
 
 
-// encripting the password 
+// encrypting the password 
 userSchema.pre('save', async function (next) {  // here don't user arrow function becus this not access it
     if(!this.isModified("password")) return next() 
-    this.password = bcrypt.hash(this.password, 10)
+    this.password = await bcrypt.hash(this.password, 10)
     next()
 })
 
@@ -84,9 +84,9 @@ userSchema.methods.isPasswordCorrect = async function (password){
     return await bcrypt.compare(password,this.password);
 }
 
-userSchema.methods.generateAccessToken = async function(){
+userSchema.methods.generateAccessToken =  function(){
 
-   return await jwt.sign(
+   return jwt.sign(
             // payload
         {
             _id : this._id,
@@ -98,21 +98,21 @@ userSchema.methods.generateAccessToken = async function(){
         process.env.ACCESS_TOKEN_SECRET,
             // expiredTime
         {
-            expiredIn : process.env.ACCESS_TOKEN_EXPIRY
+            expiresIn : process.env.ACCESS_TOKEN_EXPIRY
         }
     )
 }
-userSchema.methods.generateRefreshToken = async function(){
-    return await jwt.sign(
+userSchema.methods.generateRefreshToken =  function(){
+    return jwt.sign(
             // payload
         {
-            _id : this._id,
+            _id : this._id
         },
             // secret key
         process.env.REFRESH_TOKEN_SECRET,
             // expiredTime
         {
-            expiredIn : process.env.            REFRESH_TOKEN_EXPIRY
+            expiresIn : process.env.REFRESH_TOKEN_EXPIRY
         }
     )
 }

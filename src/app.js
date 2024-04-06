@@ -9,9 +9,9 @@ app.use(cors({
     credentials : true,
 }))
 app.use(express.json({   // here body-parser not required becus now express can handle the json response from body.
-    limit : '16kb'  // optional 
+    limit : '2MB'  // optional 
 }));
-app.use(express.urlencoded({extended : true, limit : "16kb"}))  // here body-parser not required becus now express can handle the json response from body.
+app.use(express.urlencoded({extended : true, limit : "2MB"}))  // here body-parser not required becus now express can handle the json response from body.
 
 app.use(express.static("public"))
 

@@ -13,7 +13,8 @@ const asyncHandler = (requestHandler) => {
 //* same as above but here curly braces not add it is same as above.
 const asyncHandler1 = (fn) => async (req, res, next) => {
     try {
-         await fn(req,res,next)
+         return await fn(req,res,next)
+         
     } catch (error) {
         res.status(err.code || 500).json({
             success : false,
