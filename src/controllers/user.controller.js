@@ -212,7 +212,7 @@ const userLogout = asyncHandler( async (req,res)=>{
 export {
     userRegister,
     userLoggedIn,
-    userLogout
+    userLogout,
 }
 
 
