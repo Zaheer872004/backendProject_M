@@ -251,6 +251,8 @@ const userAccessToken = asyncHandler( async (req, res) =>{
    // we get the user id using the req.user._id; using this middleware.
    // taking the refresh token from the users and check given refresh token is valid as per my databases token if yes the generate the new tokens else return error.
 
+  // { req.user._id }  from the custom middleware.
+
    const token = req.cookies?.refreshToken || req.body.refreshToken
 
    if(!token){
@@ -259,12 +261,12 @@ const userAccessToken = asyncHandler( async (req, res) =>{
 
    const databaseToken = await User.findById(req.user._id)
 
-   if(!(token === databaseToken.refreshToken)){
+   if(token !== databaseToken?.refreshToken){
     throw new ApiError(400,`refreshToken is Invalid`)
    }
 
    // generate the new Token 
-   const { refreshToken, accessToken } = await generateAccessAndRefreshTokens(req.user._id)
+   const { newRefreshToken, accessToken } = await generateAccessAndRefreshTokens(req.user._id)
 
    // save the new refresh token on the database and set on the cookies. refresh and access both.
 
@@ -272,13 +274,13 @@ const userAccessToken = asyncHandler( async (req, res) =>{
 
    res.
    status(200).
-   cookie("refreshToken",refreshToken,option).
+   cookie("refreshToken",newRefreshToken,option).
    cookie("accessToken", accessToken,option).
    json(
     new ApiResponse(
       200,
       {
-        users : user, refreshToken, accessToken
+        users : user, refreshToken : newRefreshToken, accessToken
       },
       `User Successfully generate the access and refresh Token`
     )
@@ -292,5 +294,5 @@ export {
    userLogout, 
    verifyEmail, 
    userAccessToken,
-   
+
 };
