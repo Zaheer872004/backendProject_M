@@ -20,11 +20,13 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "ejs": "^3.1.9",
     "express": "^4.19.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.2.3",
     "mongoose-aggregate-paginate-v2": "^1.0.7",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.13",
     "validator": "^13.11.0"
   }
 }

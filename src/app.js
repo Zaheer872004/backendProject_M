@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import cookiesParser from 'cookie-parser'
 
+
 const app = express()
 
 app.use(cors({
@@ -17,6 +18,8 @@ app.use(express.static("public"))
 
 app.use(cookiesParser())
 
+// app66151add8571543d6795a70b66151add8571543d6795a70b.set('email-verfed', path.join(__dirname, 'views'));
+// app.set("view engine", "ejs");
 
 // routes import
 import userRouter from "./routes/user.routes.js";
