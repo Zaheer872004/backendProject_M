@@ -2,7 +2,7 @@ import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { option } from "../utils/cookieOption.js";
 import { sendVerificationEmail } from "../utils/mailService.js";
 
@@ -288,11 +288,190 @@ const userAccessToken = asyncHandler( async (req, res) =>{
 
 })
 
+const changePasswordUser = asyncHandler( async (req, res) =>{
+
+  // if user want to change the password then its already have to loggedIn the user.
+  // validate the user is loggedIn or not its done using the middleware to verifyJWT. 
+  // Accept the older password and newer password or if want to reenter/conformPassword the password again so the user typo avoid
+  // then check the older password is corrected or not if yes then process to next
+  
+  // check the newer password and reenter/conformPassword password is same or not if yes then process next
+  // newer password are do the hash beacus as per the businness logic it is recommendate 
+  // then return the response with 200 all oKay.
+  
+  // One addition for security purpose send the otp of their gmail and accept it then process to the next.
+  
+  // const userId = req.user._id
+
+  const { oldPassword, newPassword, conformPassword }  = req.body
+
+  if(
+    !oldPassword || 
+    !newPassword || 
+    !conformPassword
+  ){
+    throw new ApiError(400,`Please enter the all field for password changing`)
+  }
+
+  if( newPassword !== conformPassword ){
+    throw new ApiError( 400, `Enter the Password carefully on newPassword and conformPassword `|| error.message)
+  }
+
+  const user = await User.findById(req.user._id)
+
+  const isPasswordCorrectCheck = await user.isPasswordCorrect(oldPassword)
+
+  if(!isPasswordCorrectCheck){
+    throw new ApiError(400,`Enter the correct password`)
+  }
+  console.log(oldPassword,newPassword,conformPassword);
+  // we have written the hook of pre in userModel just before to go in the database my password will hash it.
+
+  user.password = newPassword
+  await user.save({validateBeforeSave : false})
+
+
+  // const user = await findByIdAndUpdate(
+  //   req.user._id,
+  //   {
+  //     $set : {
+  //         password : newPassword
+  //     }
+  //   },
+  //   {
+  //     new : true
+  //   }
+  // )
+
+  return res.
+  status(200).
+  json(
+    new ApiResponse(200,user,`User successfully changed the password`)
+  )
+})
+
+const changeProfileDetails = asyncHandler( async (req, res)=>{
+  // here we want to change the details of user link the username and fullname 
+
+  // Check for user is register or not if yes get the id by cookies or body
+  // get the details like the username and fullname 
+  // call to the data bases 
+  // call by findByIdAndUpdate and change the data.
+
+  req.user._id;
+  const { username, fullName } = req.body
+
+  if(
+    !username ||
+    !fullName
+  ){
+    throw new ApiError(400,`Enter the username and fullName`)
+  }
+
+  const user = await User.findByIdAndUpdate(req.user._id,{
+      $set : {
+        username,
+        fullName
+      }
+  }).select(" -password -refreshToken ")
+
+  return res.
+  status(200).
+  json(
+    new ApiResponse(200,user,`User successfully change the username and fullName`)
+  )
+
+})
+
+const changeAvatar = asyncHandler( async (req, res)=>{
+  // user is already exists 
+  // add the middleware on the routes so multer upload the file on the localServer and cloudinary upload the onCloudinary
+  
+  // taking the path of the localserver using the req.file.
+  // That file add validation if exist or not
+  // upload on the cloudinary using the uploadOnCloudinary method.
+  // add validation it is  uploaded or not.
+  // After that return the response.
+
+  const avatarLocalPath = req.file
+
+  if(!avatarLocalPath){
+    throw new ApiError(400,`Failed on upload the avatar file on server`)
+  }
+
+  const cloudResponse = await uploadOnCloudinary(avatarLocalPath)
+
+
+  if(!cloudResponse){
+    throw new ApiError(500,`Failed to upload on cloudinary`)
+  }
+
+  const response = await User.findByIdAndUpdate(req.user._id,{
+      $set : {
+          avatar : cloudResponse.url
+      }
+  }).select("-password -refreshToken")
+
+  if(!response){
+    throw new ApiError(500,`Something went wrong on the database call`)
+  }
+
+  return res.
+  status(200).
+  json(
+    new ApiResponse(200,response,`User successfully update the avatar`)
+  )
+
+})
+
+const changeCoverImage = asyncHandler( async (req, res)=>{
+  // user is already exists 
+  // add the middleware on the routes so multer upload the file on the localServer and cloudinary upload the onCloudinary
+  
+  // taking the path of the localserver using the req.file.
+  // That file add validation if exist or not
+  // upload on the cloudinary using the uploadOnCloudinary method.
+  // add validation it is  uploaded or not.
+  // After that return the response.
+
+  const coverImageLocalPath = req.file
+
+  if(!coverImageLocalPath){
+    throw new ApiError(400,`Failed on upload the coverImage file on server`)
+  }
+
+  const cloudResponse = await uploadOnCloudinary(coverImageLocalPath)
+
+
+  if(!cloudResponse){
+    throw new ApiError(500,`Failed to upload on cloudinary`)
+  }
+
+  const response = await User.findByIdAndUpdate(req.user._id,{
+      $set : {
+          coverImage : cloudResponse.url
+      }
+  }).select("-password -refreshToken")
+
+  if(!response){
+    throw new ApiError(500,`Something went wrong on the database call`)
+  }
+
+  return res.
+  status(200).
+  json(
+    new ApiResponse(200,response,`User successfully update the coverImage`)
+  )
+
+})
+
+
 export {
    userRegister, 
    userLoggedIn, 
    userLogout, 
    verifyEmail, 
    userAccessToken,
+   changePasswordUser
 
 };
