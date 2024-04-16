@@ -270,7 +270,7 @@ const userAccessToken = asyncHandler( async (req, res) =>{
 
    // save the new refresh token on the database and set on the cookies. refresh and access both.
 
-   const user = await User.findOne(req.user._id).select("-password -refreshToken -accessToken")
+   const user = await User.findOne(req.user._id).select("-password -refreshToken")
 
    res.
    status(200).
@@ -368,12 +368,17 @@ const changeProfileDetails = asyncHandler( async (req, res)=>{
     throw new ApiError(400,`Enter the username and fullName`)
   }
 
-  const user = await User.findByIdAndUpdate(req.user._id,{
+  const user = await User.findByIdAndUpdate(req.user._id,
+    {
       $set : {
         username,
         fullName
       }
-  }).select(" -password -refreshToken ")
+    },
+    {
+      new : true
+    }
+  ).select(" -password -refreshToken ")
 
   return res.
   status(200).
@@ -393,7 +398,7 @@ const changeAvatar = asyncHandler( async (req, res)=>{
   // add validation it is  uploaded or not.
   // After that return the response.
 
-  const avatarLocalPath = req.file
+  const avatarLocalPath = req.file?.path
 
   if(!avatarLocalPath){
     throw new ApiError(400,`Failed on upload the avatar file on server`)
@@ -406,11 +411,16 @@ const changeAvatar = asyncHandler( async (req, res)=>{
     throw new ApiError(500,`Failed to upload on cloudinary`)
   }
 
-  const response = await User.findByIdAndUpdate(req.user._id,{
+  const response = await User.findByIdAndUpdate(req.user._id,
+    {
       $set : {
           avatar : cloudResponse.url
       }
-  }).select("-password -refreshToken")
+    },
+    {
+      new : true
+    }
+  ).select("-password -refreshToken")
 
   if(!response){
     throw new ApiError(500,`Something went wrong on the database call`)
@@ -434,7 +444,7 @@ const changeCoverImage = asyncHandler( async (req, res)=>{
   // add validation it is  uploaded or not.
   // After that return the response.
 
-  const coverImageLocalPath = req.file
+  const coverImageLocalPath = req.file?.path
 
   if(!coverImageLocalPath){
     throw new ApiError(400,`Failed on upload the coverImage file on server`)
@@ -447,11 +457,16 @@ const changeCoverImage = asyncHandler( async (req, res)=>{
     throw new ApiError(500,`Failed to upload on cloudinary`)
   }
 
-  const response = await User.findByIdAndUpdate(req.user._id,{
+  const response = await User.findByIdAndUpdate(req.user._id,
+    {
       $set : {
           coverImage : cloudResponse.url
-      }
-  }).select("-password -refreshToken")
+      },
+    },
+    {
+      new : true
+    },
+  ).select("-password -refreshToken")
 
   if(!response){
     throw new ApiError(500,`Something went wrong on the database call`)
@@ -472,6 +487,19 @@ export {
    userLogout, 
    verifyEmail, 
    userAccessToken,
-   changePasswordUser
-
+   changePasswordUser,
+   changeAvatar,
+   changeCoverImage,
+   changeProfileDetails
 };
+
+
+
+
+
+
+
+
+
+
+
