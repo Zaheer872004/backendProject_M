@@ -2,7 +2,7 @@ import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
-import { uploadOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { option } from "../utils/cookieOption.js";
 import { sendVerificationEmail } from "../utils/mailService.js";
 
@@ -432,6 +432,8 @@ const changeAvatar = asyncHandler( async (req, res)=>{
     new ApiResponse(200,response,`User successfully update the avatar`)
   )
 
+  // One thing is remaining get the previous avatar image id and delete it.  make on helper function for file deletion because it used a lot.
+
 })
 
 const changeCoverImage = asyncHandler( async (req, res)=>{
@@ -480,6 +482,106 @@ const changeCoverImage = asyncHandler( async (req, res)=>{
 
 })
 
+const getCurrentUser = asyncHandler( async (req,res)=>{
+  
+  // console.log(req.user);
+  const val = req.user
+  console.log(val);
+
+  return res.
+  status(200).
+  json(
+    new ApiResponse(
+      200,
+      req.user,
+      `user Successfully get their details`
+    )
+  )
+})
+
+const getUserChannelProfile = asyncHandler( async(req,res)=>{
+
+  // const userId = req.user._id
+
+  const { username } = req.params
+
+  if(!username.trim()){
+      throw new ApiError(400,`Channel doesn't exist anymore`)
+  }
+
+  //  find in database then apply the pipeline
+
+  // * const userId1 = await User.find(req.user._id)
+  
+  // check userId1 is there in database or not 
+
+  // for Saving the extra database call. lets write here
+  const channel = await User.aggregate([
+    {
+        $match : {
+            username : username?.toLowerCase()
+        }
+    },
+    {
+        $lookup : {
+            from : "subscriptions",
+            localField : "_id",
+            foreignField : "channel",
+            as : "subscriber"
+        }
+    },
+    {
+        $lookup : {
+            from : "subscriptions",
+            localField : "_id",
+            foreignField : "subscriber",
+            as : "subscribedTo"
+        }
+    },
+    {
+       $addFields : {
+            subscriberCount :{
+                $size : "$subscribers"  // here also used the $count operator.
+            },
+            channelSubscribedCount : {
+                $size : "$subscribedTo"  // here also used the $count operator.
+            },
+            isSubscribed : {
+                $cond : {
+                    if: {$in : [req.user._id, "$subscribers.subscriber"]},
+                    then : true,
+                    else : false
+                }
+            }
+       }
+    },
+    {
+        $project : {
+            username : 1,
+            fullName : 1,
+            email : 1,
+            avatar : 1,
+            coverImage : 1,
+            subscriberCount : 1,
+            channelSubscribedCount : 1,
+            isSubscribed : 1,
+        }
+    }
+  ])
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(
+      200,
+      {
+        data : channel[0]
+      },
+      ` Successfully get or fetched the data for channel Profile `
+    )
+  )
+
+})
 
 export {
    userRegister, 
@@ -490,7 +592,9 @@ export {
    changePasswordUser,
    changeAvatar,
    changeCoverImage,
-   changeProfileDetails
+   changeProfileDetails,
+   getCurrentUser,
+   getUserChannelProfile
 };
 
 
