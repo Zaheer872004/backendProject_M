@@ -6,6 +6,7 @@ import {
     changeProfileDetails, 
     getCurrentUser, 
     getUserChannelProfile, 
+    getWatchHistory, 
     userAccessToken, 
     userLoggedIn, 
     userLogout, 
@@ -54,7 +55,7 @@ router.route('/changeCoverImage').patch(verifyJWT,changeCoverImage)
 
 router.route('/getChannelDetails/:username').get(verifyJWT,getUserChannelProfile)
 
-
+router.route('/getWatchHistory').get(verifyJWT,getWatchHistory)
 
 
 export default router;

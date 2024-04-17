@@ -5,6 +5,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { option } from "../utils/cookieOption.js";
 import { sendVerificationEmail } from "../utils/mailService.js";
+import mongoose, { Schema, mongo } from "mongoose";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -108,18 +109,14 @@ const userRegister = asyncHandler(async (req, res) => {
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while user registration");
   }
-{
-  try {
-    await sendVerificationEmail(
-      email,
-      fullName,
-      user._id
-    );
-  } catch (error) {
-    console.log(`Error Sending the verification email : `, error.message);
-    throw new ApiError(500, `Failed to send the verification email`);
+  {
+    try {
+      await sendVerificationEmail(email, fullName, user._id);
+    } catch (error) {
+      console.log(`Error Sending the verification email : `, error.message);
+      throw new ApiError(500, `Failed to send the verification email`);
+    }
   }
-}
   return res
     .status(201)
     .json(
@@ -132,22 +129,28 @@ const userRegister = asyncHandler(async (req, res) => {
 });
 
 const verifyEmail = async (req, res) => {
-  const { user_id }  = req.query;
+  const { user_id } = req.query;
 
   try {
-    const response1 = await User.findByIdAndUpdate( user_id , {
+    const response1 = await User.findByIdAndUpdate(user_id, {
       $set: {
         is_verified: true,
       },
     });
-    console.log(`User verification response : `+ response1);
+    console.log(`User verification response : ` + response1);
     // res.render("email-verified");
-    return res.status(200).json(
-      new ApiResponse(200, response1 ,`User Successfully verified ${response1.status}`)
-    )
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          response1,
+          `User Successfully verified ${response1.status}`
+        )
+      );
   } catch (error) {
     console.error("Error verifying email:", error);
-    res.status(500).json({ error: "Failed to verify email"+error.message });
+    res.status(500).json({ error: "Failed to verify email" + error.message });
   }
 };
 
@@ -247,89 +250,92 @@ const userLogout = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, "", `User successfully LoggedOut`));
 });
 
-const userAccessToken = asyncHandler( async (req, res) =>{
-   // we get the user id using the req.user._id; using this middleware.
-   // taking the refresh token from the users and check given refresh token is valid as per my databases token if yes the generate the new tokens else return error.
+const userAccessToken = asyncHandler(async (req, res) => {
+  // we get the user id using the req.user._id; using this middleware.
+  // taking the refresh token from the users and check given refresh token is valid as per my databases token if yes the generate the new tokens else return error.
 
   // { req.user._id }  from the custom middleware.
 
-   const token = req.cookies?.refreshToken || req.body.refreshToken
+  const token = req.cookies?.refreshToken || req.body.refreshToken;
 
-   if(!token){
-    throw new ApiError(400,`refreshToken is missing`)
-   }
+  if (!token) {
+    throw new ApiError(400, `refreshToken is missing`);
+  }
 
-   const databaseToken = await User.findById(req.user._id)
+  const databaseToken = await User.findById(req.user._id);
 
-   if(token !== databaseToken?.refreshToken){
-    throw new ApiError(400,`refreshToken is Invalid`)
-   }
+  if (token !== databaseToken?.refreshToken) {
+    throw new ApiError(400, `refreshToken is Invalid`);
+  }
 
-   // generate the new Token 
-   const { newRefreshToken, accessToken } = await generateAccessAndRefreshTokens(req.user._id)
+  // generate the new Token
+  const { newRefreshToken, accessToken } = await generateAccessAndRefreshTokens(
+    req.user._id
+  );
 
-   // save the new refresh token on the database and set on the cookies. refresh and access both.
+  // save the new refresh token on the database and set on the cookies. refresh and access both.
 
-   const user = await User.findOne(req.user._id).select("-password -refreshToken")
+  const user = await User.findOne(req.user._id).select(
+    "-password -refreshToken"
+  );
 
-   res.
-   status(200).
-   cookie("refreshToken",newRefreshToken,option).
-   cookie("accessToken", accessToken,option).
-   json(
-    new ApiResponse(
-      200,
-      {
-        users : user, refreshToken : newRefreshToken, accessToken
-      },
-      `User Successfully generate the access and refresh Token`
-    )
-   )
+  res
+    .status(200)
+    .cookie("refreshToken", newRefreshToken, option)
+    .cookie("accessToken", accessToken, option)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          users: user,
+          refreshToken: newRefreshToken,
+          accessToken,
+        },
+        `User Successfully generate the access and refresh Token`
+      )
+    );
+});
 
-})
-
-const changePasswordUser = asyncHandler( async (req, res) =>{
-
+const changePasswordUser = asyncHandler(async (req, res) => {
   // if user want to change the password then its already have to loggedIn the user.
-  // validate the user is loggedIn or not its done using the middleware to verifyJWT. 
+  // validate the user is loggedIn or not its done using the middleware to verifyJWT.
   // Accept the older password and newer password or if want to reenter/conformPassword the password again so the user typo avoid
   // then check the older password is corrected or not if yes then process to next
-  
+
   // check the newer password and reenter/conformPassword password is same or not if yes then process next
-  // newer password are do the hash beacus as per the businness logic it is recommendate 
+  // newer password are do the hash beacus as per the businness logic it is recommendate
   // then return the response with 200 all oKay.
-  
+
   // One addition for security purpose send the otp of their gmail and accept it then process to the next.
-  
+
   // const userId = req.user._id
 
-  const { oldPassword, newPassword, conformPassword }  = req.body
+  const { oldPassword, newPassword, conformPassword } = req.body;
 
-  if(
-    !oldPassword || 
-    !newPassword || 
-    !conformPassword
-  ){
-    throw new ApiError(400,`Please enter the all field for password changing`)
+  if (!oldPassword || !newPassword || !conformPassword) {
+    throw new ApiError(400, `Please enter the all field for password changing`);
   }
 
-  if( newPassword !== conformPassword ){
-    throw new ApiError( 400, `Enter the Password carefully on newPassword and conformPassword `|| error.message)
+  if (newPassword !== conformPassword) {
+    throw new ApiError(
+      400,
+      `Enter the Password carefully on newPassword and conformPassword ` ||
+        error.message
+    );
   }
 
-  const user = await User.findById(req.user._id)
+  const user = await User.findById(req.user._id);
 
-  const isPasswordCorrectCheck = await user.isPasswordCorrect(oldPassword)
+  const isPasswordCorrectCheck = await user.isPasswordCorrect(oldPassword);
 
-  if(!isPasswordCorrectCheck){
-    throw new ApiError(400,`Enter the correct password`)
+  if (!isPasswordCorrectCheck) {
+    throw new ApiError(400, `Enter the correct password`);
   }
-  console.log(oldPassword,newPassword,conformPassword);
+  console.log(oldPassword, newPassword, conformPassword);
   // we have written the hook of pre in userModel just before to go in the database my password will hash it.
 
-  user.password = newPassword
-  await user.save({validateBeforeSave : false})
-
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
 
   // const user = await findByIdAndUpdate(
   //   req.user._id,
@@ -343,248 +349,302 @@ const changePasswordUser = asyncHandler( async (req, res) =>{
   //   }
   // )
 
-  return res.
-  status(200).
-  json(
-    new ApiResponse(200,user,`User successfully changed the password`)
-  )
-})
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, `User successfully changed the password`));
+});
 
-const changeProfileDetails = asyncHandler( async (req, res)=>{
-  // here we want to change the details of user link the username and fullname 
+const changeProfileDetails = asyncHandler(async (req, res) => {
+  // here we want to change the details of user link the username and fullname
 
   // Check for user is register or not if yes get the id by cookies or body
-  // get the details like the username and fullname 
-  // call to the data bases 
+  // get the details like the username and fullname
+  // call to the data bases
   // call by findByIdAndUpdate and change the data.
 
   req.user._id;
-  const { username, fullName } = req.body
+  const { username, fullName } = req.body;
 
-  if(
-    !username ||
-    !fullName
-  ){
-    throw new ApiError(400,`Enter the username and fullName`)
+  if (!username || !fullName) {
+    throw new ApiError(400, `Enter the username and fullName`);
   }
 
-  const user = await User.findByIdAndUpdate(req.user._id,
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
     {
-      $set : {
+      $set: {
         username,
-        fullName
-      }
-    },
-    {
-      new : true
-    }
-  ).select(" -password -refreshToken ")
-
-  return res.
-  status(200).
-  json(
-    new ApiResponse(200,user,`User successfully change the username and fullName`)
-  )
-
-})
-
-const changeAvatar = asyncHandler( async (req, res)=>{
-  // user is already exists 
-  // add the middleware on the routes so multer upload the file on the localServer and cloudinary upload the onCloudinary
-  
-  // taking the path of the localserver using the req.file.
-  // That file add validation if exist or not
-  // upload on the cloudinary using the uploadOnCloudinary method.
-  // add validation it is  uploaded or not.
-  // After that return the response.
-
-  const avatarLocalPath = req.file?.path
-
-  if(!avatarLocalPath){
-    throw new ApiError(400,`Failed on upload the avatar file on server`)
-  }
-
-  const cloudResponse = await uploadOnCloudinary(avatarLocalPath)
-
-
-  if(!cloudResponse){
-    throw new ApiError(500,`Failed to upload on cloudinary`)
-  }
-
-  const response = await User.findByIdAndUpdate(req.user._id,
-    {
-      $set : {
-          avatar : cloudResponse.url
-      }
-    },
-    {
-      new : true
-    }
-  ).select("-password -refreshToken")
-
-  if(!response){
-    throw new ApiError(500,`Something went wrong on the database call`)
-  }
-
-  return res.
-  status(200).
-  json(
-    new ApiResponse(200,response,`User successfully update the avatar`)
-  )
-
-  // One thing is remaining get the previous avatar image id and delete it.  make on helper function for file deletion because it used a lot.
-
-})
-
-const changeCoverImage = asyncHandler( async (req, res)=>{
-  // user is already exists 
-  // add the middleware on the routes so multer upload the file on the localServer and cloudinary upload the onCloudinary
-  
-  // taking the path of the localserver using the req.file.
-  // That file add validation if exist or not
-  // upload on the cloudinary using the uploadOnCloudinary method.
-  // add validation it is  uploaded or not.
-  // After that return the response.
-
-  const coverImageLocalPath = req.file?.path
-
-  if(!coverImageLocalPath){
-    throw new ApiError(400,`Failed on upload the coverImage file on server`)
-  }
-
-  const cloudResponse = await uploadOnCloudinary(coverImageLocalPath)
-
-
-  if(!cloudResponse){
-    throw new ApiError(500,`Failed to upload on cloudinary`)
-  }
-
-  const response = await User.findByIdAndUpdate(req.user._id,
-    {
-      $set : {
-          coverImage : cloudResponse.url
+        fullName,
       },
     },
     {
-      new : true
-    },
-  ).select("-password -refreshToken")
+      new: true,
+    }
+  ).select(" -password -refreshToken ");
 
-  if(!response){
-    throw new ApiError(500,`Something went wrong on the database call`)
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user,
+        `User successfully change the username and fullName`
+      )
+    );
+});
+
+const changeAvatar = asyncHandler(async (req, res) => {
+  // user is already exists
+  // add the middleware on the routes so multer upload the file on the localServer and cloudinary upload the onCloudinary
+
+  // taking the path of the localserver using the req.file.
+  // That file add validation if exist or not
+  // upload on the cloudinary using the uploadOnCloudinary method.
+  // add validation it is  uploaded or not.
+  // After that return the response.
+
+  const avatarLocalPath = req.file?.path;
+
+  if (!avatarLocalPath) {
+    throw new ApiError(400, `Failed on upload the avatar file on server`);
   }
 
-  return res.
-  status(200).
-  json(
-    new ApiResponse(200,response,`User successfully update the coverImage`)
-  )
+  const cloudResponse = await uploadOnCloudinary(avatarLocalPath);
 
-})
+  if (!cloudResponse) {
+    throw new ApiError(500, `Failed to upload on cloudinary`);
+  }
 
-const getCurrentUser = asyncHandler( async (req,res)=>{
-  
+  const response = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        avatar: cloudResponse.url,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password -refreshToken");
+
+  if (!response) {
+    throw new ApiError(500, `Something went wrong on the database call`);
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, response, `User successfully update the avatar`)
+    );
+
+  // One thing is remaining get the previous avatar image id and delete it.  make on helper function for file deletion because it used a lot.
+});
+
+const changeCoverImage = asyncHandler(async (req, res) => {
+  // user is already exists
+  // add the middleware on the routes so multer upload the file on the localServer and cloudinary upload the onCloudinary
+
+  // taking the path of the localserver using the req.file.
+  // That file add validation if exist or not
+  // upload on the cloudinary using the uploadOnCloudinary method.
+  // add validation it is  uploaded or not.
+  // After that return the response.
+
+  const coverImageLocalPath = req.file?.path;
+
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, `Failed on upload the coverImage file on server`);
+  }
+
+  const cloudResponse = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!cloudResponse) {
+    throw new ApiError(500, `Failed to upload on cloudinary`);
+  }
+
+  const response = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        coverImage: cloudResponse.url,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password -refreshToken");
+
+  if (!response) {
+    throw new ApiError(500, `Something went wrong on the database call`);
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, response, `User successfully update the coverImage`)
+    );
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
   // console.log(req.user);
-  const val = req.user
+  const val = req.user;
   console.log(val);
 
-  return res.
-  status(200).
-  json(
-    new ApiResponse(
-      200,
-      req.user,
-      `user Successfully get their details`
-    )
-  )
-})
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, req.user, `user Successfully get their details`)
+    );
+});
 
-const getUserChannelProfile = asyncHandler( async(req,res)=>{
-
+const getUserChannelProfile = asyncHandler(async (req, res) => {
   // const userId = req.user._id
 
   const { username } = req.params;
 
   console.log(username);
 
-  if(!username){
-      throw new ApiError(400,`Channel doesn't exist anymore`)
+  if (!username) {
+    throw new ApiError(400, `Channel doesn't exist anymore`);
   }
 
   //  find in database then apply the pipeline
 
   // * const userId1 = await User.find(req.user._id)
-  
-  // check userId1 is there in database or not 
+
+  // check userId1 is there in database or not
 
   // for Saving the extra database call. lets write here
   const channel = await User.aggregate([
     {
-        $match : {
-            username : username?.toLowerCase()
-        }
+      $match: {
+        username: username?.toLowerCase(),
+      },
     },
     {
-        $lookup : {
-            from : "subscriptions",
-            localField : "_id",
-            foreignField : "channel",
-            as : "subscriber"
-        }
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscriber",
+      },
     },
     {
-        $lookup : {
-            from : "subscriptions",
-            localField : "_id",
-            foreignField : "subscriber",
-            as : "subscribedTo"
-        }
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo",
+      },
     },
     {
-       $addFields : {
-            subscriberCount :{
-                $cond :{
-                  if: { $isArray:"$subscribers"},
-                  then: { $size : "$subscribers" },
-                  else : 0,
-                }  // $size: "$subscribers"  here also used the $count operator.
+      $addFields: {
+        subscriberCount: {
+          $cond: {
+            if: { $isArray: "$subscribers" },
+            then: { $size: "$subscribers" },
+            else: 0,
+          }, // $size: "$subscribers"  here also used the $count operator.
+        },
+        channelSubscribedCount: {
+          $cond: {
+            if: { $isArray: "$subscribedTo" },
+            then: { $size: "$subscribedTo" },
+            else: 0,
+          }, // $size: "$subscribedTo" here also used the $count operator.
+        },
+        isSubscribed: {
+          $cond: {
+            if: {
+              $and: [
+                { $isArray: "$subscribers" },
+                { $in: [req.user._id, "$subscribers.subscriber"] },
+              ],
             },
-            channelSubscribedCount : {
-                $cond:{
-                  if: { $isArray:"$subscribedTo"},
-                  then: { $size :"$subscribedTo"},
-                  else: 0
-                }  // $size: "$subscribedTo" here also used the $count operator.
-            },
-            isSubscribed : {
-                $cond : {
-                  if: { $and: [ { $isArray: "$subscribers" }, { $in: [req.user._id, "$subscribers.subscriber"] } ] },
-                    then : true,
-                    else : false
-                }
-            }
-       }
+            then: true,
+            else: false,
+          },
+        },
+      },
     },
     {
-        $project : {
-            username : 1,
-            fullName : 1,
-            email : 1,
-            avatar : 1,
-            coverImage : 1,
-            subscriberCount : 1,
-            channelSubscribedCount : 1,
-            isSubscribed : 1,
-        }
-    }
-  ])
+      $project: {
+        username: 1,
+        fullName: 1,
+        email: 1,
+        avatar: 1,
+        coverImage: 1,
+        subscriberCount: 1,
+        channelSubscribedCount: 1,
+        isSubscribed: 1,
+      },
+    },
+  ]);
 
-  if(!(channel?.length > 0)){  // (!channel?.length)
-    throw new ApiError(404,`Channel does not exist`)
+  if (!(channel?.length > 0)) {
+    // (!channel?.length)
+    throw new ApiError(404, `Channel does not exist`);
   }
 
   // console.log(channel);
   // console.log(channel[0]);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        data: channel[0],
+      },
+      ` Successfully get or fetched the data for channel Profile `
+    )
+  );
+});
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id), // here we have to pass manually here mongoose not come in picture.
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "WatchHistories",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owners",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    fullName: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields : {
+              
+               owner : {
+                 $first : "$owners" // also used $arrayElemAt: [ <array>, <idx> ],
+                 // $arrayElemAt: [ "$undefinedField", 0 ]
+               }
+            }
+          }
+        ],
+      },
+    },
+  ]);
 
   return res
   .status(200)
@@ -592,37 +652,25 @@ const getUserChannelProfile = asyncHandler( async(req,res)=>{
     new ApiResponse(
       200,
       {
-        data : channel[0]
+        user : user[0]   //OR user[0].watchHistories
       },
-      ` Successfully get or fetched the data for channel Profile `
+      `User successfully fetch the watchHistory`
     )
   )
 
-})
-
-
+});
 
 export {
-   userRegister, 
-   userLoggedIn, 
-   userLogout, 
-   verifyEmail, 
-   userAccessToken,
-   changePasswordUser,
-   changeAvatar,
-   changeCoverImage,
-   changeProfileDetails,
-   getCurrentUser,
-   getUserChannelProfile
+  userRegister,
+  userLoggedIn,
+  userLogout,
+  verifyEmail,
+  userAccessToken,
+  changePasswordUser,
+  changeAvatar,
+  changeCoverImage,
+  changeProfileDetails,
+  getCurrentUser,
+  getUserChannelProfile,
+  getWatchHistory,
 };
-
-
-
-
-
-
-
-
-
-
-
