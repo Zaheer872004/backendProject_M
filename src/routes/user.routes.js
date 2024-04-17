@@ -1,5 +1,17 @@
-import { Router } from "express";
-import {changeAvatar, changeCoverImage, changePasswordUser, changeProfileDetails, getCurrentUser, getUserChannelProfile, userAccessToken, userLoggedIn, userLogout, userRegister, verifyEmail } from "../controllers/user.controller.js";
+import express, { Router } from "express";
+import {
+    changeAvatar, 
+    changeCoverImage, 
+    changePasswordUser, 
+    changeProfileDetails, 
+    getCurrentUser, 
+    getUserChannelProfile, 
+    userAccessToken, 
+    userLoggedIn, 
+    userLogout, 
+    userRegister, 
+    verifyEmail 
+} from "../controllers/user.controller.js";
 import { upload } from '../middlewares/multer.middleware.js'
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -20,6 +32,8 @@ router.route("/register").post(
     userRegister
     )
 
+// All User models routes.
+
 router.route("/login").post(userLoggedIn)
 
 router.route("/logout").post(verifyJWT,userLogout)
@@ -38,7 +52,10 @@ router.route('/changeAvatar').patch(verifyJWT,changeAvatar)
 
 router.route('/changeCoverImage').patch(verifyJWT,changeCoverImage)
 
-router.route('/getChannelDetails').get(getUserChannelProfile)
+router.route('/getChannelDetails/:username').get(verifyJWT,getUserChannelProfile)
+
+
+
 
 export default router;
 

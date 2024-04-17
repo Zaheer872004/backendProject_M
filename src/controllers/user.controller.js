@@ -503,9 +503,11 @@ const getUserChannelProfile = asyncHandler( async(req,res)=>{
 
   // const userId = req.user._id
 
-  const { username } = req.params
+  const { username } = req.params;
 
-  if(!username.trim()){
+  console.log(username);
+
+  if(!username){
       throw new ApiError(400,`Channel doesn't exist anymore`)
   }
 
@@ -541,14 +543,22 @@ const getUserChannelProfile = asyncHandler( async(req,res)=>{
     {
        $addFields : {
             subscriberCount :{
-                $size : "$subscribers"  // here also used the $count operator.
+                $cond :{
+                  if: { $isArray:"$subscribers"},
+                  then: { $size : "$subscribers" },
+                  else : 0,
+                }  // $size: "$subscribers"  here also used the $count operator.
             },
             channelSubscribedCount : {
-                $size : "$subscribedTo"  // here also used the $count operator.
+                $cond:{
+                  if: { $isArray:"$subscribedTo"},
+                  then: { $size :"$subscribedTo"},
+                  else: 0
+                }  // $size: "$subscribedTo" here also used the $count operator.
             },
             isSubscribed : {
                 $cond : {
-                    if: {$in : [req.user._id, "$subscribers.subscriber"]},
+                  if: { $and: [ { $isArray: "$subscribers" }, { $in: [req.user._id, "$subscribers.subscriber"] } ] },
                     then : true,
                     else : false
                 }
@@ -569,6 +579,13 @@ const getUserChannelProfile = asyncHandler( async(req,res)=>{
     }
   ])
 
+  if(!(channel?.length > 0)){  // (!channel?.length)
+    throw new ApiError(404,`Channel does not exist`)
+  }
+
+  // console.log(channel);
+  // console.log(channel[0]);
+
   return res
   .status(200)
   .json(
@@ -582,6 +599,8 @@ const getUserChannelProfile = asyncHandler( async(req,res)=>{
   )
 
 })
+
+
 
 export {
    userRegister, 
