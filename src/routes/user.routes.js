@@ -49,9 +49,9 @@ router.route('/changePassword').patch(verifyJWT,changePasswordUser)
 
 router.route('/changeDetails').patch(verifyJWT,changeProfileDetails)
 
-router.route('/changeAvatar').patch(verifyJWT,changeAvatar)
+router.route('/changeAvatar').patch(verifyJWT, upload.single("avatar"), changeAvatar)
 
-router.route('/changeCoverImage').patch(verifyJWT,changeCoverImage)
+router.route('/changeCoverImage').patch(verifyJWT, upload.single("coverImage"), changeCoverImage)
 
 router.route('/getChannelDetails/:username').get(verifyJWT,getUserChannelProfile)
 
