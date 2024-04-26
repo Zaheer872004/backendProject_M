@@ -7,12 +7,12 @@ const videoSchema = new Schema({
         required : true,
     },
     thumbnail : {
-        type : String,
+        type : String,  // cloudinary url
         required : true
     },
     title : {
         type : String,
-        required : true
+        required : true,
     },
     description : {
         type : String,
@@ -33,7 +33,7 @@ const videoSchema = new Schema({
     owner : {
         type : Schema.Types.ObjectId,
         ref : "User"
-    }, 
+    }
 
 
 }, {timestamps : true})
