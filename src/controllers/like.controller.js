@@ -195,7 +195,102 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 
 const getLikedVideos = asyncHandler(async (req, res) => {
     //TODO: get all liked videos
+    // get the userId from the req.user._id
+    // Inside the aggregation of likes schema
+    /*
+        1. match with the req.user._id
+        2. lookup with the video   // to get all liked videos
+            i) lookup with the user   // to get the details to that videos only
+        3. addField what ever we want  or else you can also used the unwind
+        4 sort in as per requiredment
+        5 project it.
 
+    */
+   // return response.
+
+   const getLikeAggregate = await Like.aggregate(
+    [
+        {
+            $match : {
+                likedBy : new mongoose.Types.ObjectId(req.user?._id)
+            }
+        },
+        {
+            $lookup : {
+                from : "videos",
+                localField : "video",
+                foreignField : "_id",
+                as : "videoList",
+                pipeline : [
+                    {
+                        $lookup : {
+                            from : "users",
+                            localField : "owner",
+                            foreignField : "_id",
+                            as : "detailOwner",
+                            pipeline : [
+                                {
+                                    $project : {
+                                        username : 1,
+                                        fullName : 1,
+                                        avatar : 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        // $addFields: {
+                        //   firstOwnerDetail: { $first: "$detailOwner" } // Add a new field 'firstOwnerDetail' with the first element of the 'detailOwner' array
+                        // }
+
+                        $unwind : "$detailOwner",
+                    }
+                ]
+            }
+        },
+        {
+            $unwind : "$videoList",  // here also used the addField function
+        },
+        {
+            $sort : {
+                createdAt : -1  // 
+            }
+        },
+        {
+            $project : {
+                videoList : {
+                    _id : 1,
+                    "videoFile.url" : 1,
+                    "thumbnail.url" : 1,
+                    owner : 1,
+                    title : 1,
+                    description : 1,
+                    duration : 1,
+                    views : 1,
+                    createdAt : 1,
+                    detailOwner : {
+                        username : 1,
+                        fullName : 1,
+                        "avatar.url " : 1
+                    },
+                },
+            }
+        }
+    ]
+   );
+
+   return res
+   .status(200)
+   .json(
+        new ApiResponse(
+            200,
+            {
+                getLikeAggregate
+            },
+            `Successfully get the likeVideos`
+        )
+   )
     
 })
 
