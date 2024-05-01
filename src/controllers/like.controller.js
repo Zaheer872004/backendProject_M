@@ -90,7 +90,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
     if(liked){
         // it means user already done to like now remove their like
-        await Like.findByIdAndDelete(comment._id);
+        await Like.findByIdAndDelete(liked._id);
         return res
         .status(200)
         .json(
@@ -151,7 +151,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 
     if(liked){
         // remove the like 
-        await Like.findByIdAndDelete(tweet._id);
+        await Like.findByIdAndDelete(liked._id);
         return res
         .status
         .json(
