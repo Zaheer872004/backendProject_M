@@ -3,6 +3,7 @@ import {Playlist} from "../models/playlist.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
+import { errorMonitor } from "nodemailer/lib/xoauth2/index.js"
 
 
 const createPlaylist = asyncHandler(async (req, res) => {
@@ -203,14 +204,63 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
     const {name, description} = req.body
     //TODO: update playlist
+
+    if(!isValidObjectId(playlistId)){
+        throw new ApiError(400,`Please provide the correct playlistId`)
+    }
+
+    if(!name || !description){
+        throw new ApiError(400,`Please provide full credentail or details`)
+    }
+
+    const playlist = await findById(playlistId);
+    if(!playlist){
+        throw new ApiError(400,`Playlist not found `)
+    }
+
+    if(
+        playlist?.owner.toString() !== req.user?._id.toString()
+    ){
+        throw new ApiError(400,`Only owner of this playlist can update the playlist`)
+    }
+
+    const updatePlaylistResponse = await Playlist.findByIdAndUpdate(
+        playlist._id,
+        {
+            $set : {
+                name : name,
+                description : description,
+            }
+        },
+        {
+            new : true
+        }
+    );
+
+    if(!updatePlaylistResponse){
+        throw new ApiError(500,`unable to the update the playlist with name and description`)
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                updatePlaylistResponse,
+            },
+            `Successfully updated the playlist with name and description`
+        )
+    )
+
 })
 
 export {
-    createPlaylist,
+    createPlaylist,   // done
     getUserPlaylists,
     getPlaylistById,
-    addVideoToPlaylist,
-    removeVideoFromPlaylist,
-    deletePlaylist,
-    updatePlaylist
+    addVideoToPlaylist,   // done
+    removeVideoFromPlaylist,   // done
+    deletePlaylist,    // done 
+    updatePlaylist    // done
 }
