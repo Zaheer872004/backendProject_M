@@ -44,11 +44,219 @@ const createPlaylist = asyncHandler(async (req, res) => {
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const {userId} = req.params
     //TODO: get user playlists
+
+
+    if(!isValidObjectId(userId)){
+        throw new ApiError(400,`Please provide the corrected userId`)
+    }
+
+    const userPlaylistAggregate = await Playlist.aggregate(
+        [
+            {
+                $match : {
+                    owner : new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $lookup : {
+                    from : "videos",
+                    localField  : "videos",
+                    foreignField : "_id",
+                    as : "videoDetails",
+                    pipeline : [
+                        {
+                            $lookup  : {
+                                from : "users",
+                                localField : "owner",
+                                foreignField : "_id",
+                                as : "ownerDetails",
+                                pipeline : [
+                                    {
+                                        $project : {
+                                            username : 1,
+                                            fullName : 1,
+                                            "avatar.url" : 1,
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $unwind : "$ownerDetails"
+                        }
+                    ]
+                }
+            },
+            {
+                $match : {
+                    "$videoDetails.isPublished" : true
+                }
+            },
+            {
+                $addFields: {
+                    totalVideo : {
+                        $size : "$videoDetails"
+                    },
+                    totalViews:{
+                        $sum : "$videoDetails.views"
+                    }
+                }
+            },
+            {
+                $unwind : "$videoDetails"
+            },
+            {
+                $sort : {
+                    createdAt : -1
+                }
+            },
+            {
+                $project : {
+                    totalVideo : 1,
+                    totalViews : 1,
+                    videoDetails : {
+                        _id : 1,
+                        "videoFile.url" : 1,
+                        "thumbnail.url" : 1,
+                        title : 1,
+                        description : 1,
+                        duration : 1,
+                        views : 1,
+                        createdAt : 1,
+                        ownerDetails : {
+                            fullName : 1,
+                            username : 1,
+                            "avatar.url" : 1
+                        }
+                    }
+                }
+            }
+        ]
+    );
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                userPlaylistAggregate,
+            },
+            `Successfully fetched or get the userPlaylist`
+        )
+    )
+
+
+
+
 })
 
 const getPlaylistById = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
     //TODO: get playlist by id
+
+    if(!isValidObjectId(playlistId)){
+        throw new ApiError(400,`Please provide the corrected playlistId`)
+    }
+
+    const userPlaylistByIdAggregate = await Playlist.aggregate(
+        [
+            {
+                $match : {
+                    _id : new mongoose.Types.ObjectId(playlistId)
+                }
+            },
+            {
+                $lookup : {
+                    from : "videos",
+                    localField  : "videos",
+                    foreignField : "_id",
+                    as : "videoDetails",
+                    pipeline : [
+                        {
+                            $lookup  : {
+                                from : "users",
+                                localField : "owner",
+                                foreignField : "_id",
+                                as : "ownerDetails",
+                                pipeline : [
+                                    {
+                                        $project : {
+                                            username : 1,
+                                            fullName : 1,
+                                            "avatar.url" : 1,
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $unwind : "$ownerDetails"
+                        }
+                    ]
+                }
+            },
+            {
+                $match :{
+                    "$videoDetails.isPublished" : true
+                }
+            },
+            {
+                $unwind : "$videoDetails"
+            },
+            {
+                $sort : {
+                    createdAt : -1
+                }
+            },
+            {
+                $addFields: {
+                    totalVideo : {
+                        $size : "$videoDetails"
+                    },
+                    totalViews:{
+                        $sum : "$videoDetails.views"
+                    }
+                }
+            },
+            {
+                $project : {
+                    totalVideo : 1,
+                    totalViews : 1,
+                    videoDetails : {
+                        _id : 1,
+                        "videoFile.url" : 1,
+                        "thumbnail.url" : 1,
+                        title : 1,
+                        description : 1,
+                        duration : 1,
+                        views : 1,
+                        createdAt : 1,
+                        ownerDetails : {
+                            fullName : 1,
+                            username : 1,
+                            "avatar.url" : 1
+                        }
+                    }
+                }
+            }
+        ]
+    );
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                userPlaylistByIdAggregate,
+            },
+            `Successfully fetched or get the Playlist By playlistId`
+        )
+    )
+    
+
+
 })
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
