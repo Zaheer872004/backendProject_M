@@ -60,31 +60,9 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
             {
                 $lookup : {
                     from : "videos",
-                    localField  : "videos",
+                    localField : "videos",
                     foreignField : "_id",
-                    as : "videoDetails",
-                    pipeline : [
-                        {
-                            $lookup  : {
-                                from : "users",
-                                localField : "owner",
-                                foreignField : "_id",
-                                as : "ownerDetails",
-                                pipeline : [
-                                    {
-                                        $project : {
-                                            username : 1,
-                                            fullName : 1,
-                                            "avatar.url" : 1,
-                                        }
-                                    }
-                                ]
-                            }
-                        },
-                        {
-                            $unwind : "$ownerDetails"
-                        }
-                    ]
+                    as : "videoDetails"
                 }
             },
             {
@@ -93,21 +71,24 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                 }
             },
             {
-                $addFields: {
-                    totalVideo : {
-                        $size : "$videoDetails"
-                    },
-                    totalViews:{
-                        $sum : "$videoDetails.views"
-                    }
+                $lookup : {
+                    from : "users",
+                    localField : "owner",
+                    foreignField : "_id",
+                    as : "ownerDetails"
                 }
             },
             {
-                $unwind : "$videoDetails"
-            },
-            {
-                $sort : {
-                    createdAt : -1
+                $addFields : {
+                    totalVideos : {
+                        $size : "$videoDetails"
+                    },
+                    totalViews : {
+                        $sum : "$videoDetails.views"
+                    },
+                    owner : {
+                        $first : "$ownerDetails"
+                    }
                 }
             },
             {
@@ -120,19 +101,20 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                         "thumbnail.url" : 1,
                         title : 1,
                         description : 1,
-                        duration : 1,
+                        duration :1,
                         views : 1,
                         createdAt : 1,
-                        ownerDetails : {
-                            fullName : 1,
-                            username : 1,
-                            "avatar.url" : 1
-                        }
+                    },
+                    ownerDetails : {
+                        fullName : 1,
+                        username : 1,
+                        "avatar.url" : 1
                     }
                 }
             }
         ]
     );
+
 
     return res
     .status(200)
@@ -159,7 +141,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         throw new ApiError(400,`Please provide the corrected playlistId`)
     }
 
-    const userPlaylistByIdAggregate = await Playlist.aggregate(
+    const playlistByIdAggregate = await Playlist.aggregate(
         [
             {
                 $match : {
@@ -169,53 +151,34 @@ const getPlaylistById = asyncHandler(async (req, res) => {
             {
                 $lookup : {
                     from : "videos",
-                    localField  : "videos",
+                    localField : "videos",
                     foreignField : "_id",
-                    as : "videoDetails",
-                    pipeline : [
-                        {
-                            $lookup  : {
-                                from : "users",
-                                localField : "owner",
-                                foreignField : "_id",
-                                as : "ownerDetails",
-                                pipeline : [
-                                    {
-                                        $project : {
-                                            username : 1,
-                                            fullName : 1,
-                                            "avatar.url" : 1,
-                                        }
-                                    }
-                                ]
-                            }
-                        },
-                        {
-                            $unwind : "$ownerDetails"
-                        }
-                    ]
+                    as : "videoDetails"
                 }
             },
             {
-                $match :{
+                $match : {
                     "$videoDetails.isPublished" : true
                 }
             },
             {
-                $unwind : "$videoDetails"
-            },
-            {
-                $sort : {
-                    createdAt : -1
+                $lookup : {
+                    from : "users",
+                    localField : "owner",
+                    foreignField : "_id",
+                    as : "ownerDetails"
                 }
             },
             {
-                $addFields: {
-                    totalVideo : {
+                $addFields : {
+                    totalVideos : {
                         $size : "$videoDetails"
                     },
-                    totalViews:{
+                    totalViews : {
                         $sum : "$videoDetails.views"
+                    },
+                    owner : {
+                        $first : "$ownerDetails"
                     }
                 }
             },
@@ -229,20 +192,21 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                         "thumbnail.url" : 1,
                         title : 1,
                         description : 1,
-                        duration : 1,
+                        duration :1,
                         views : 1,
                         createdAt : 1,
-                        ownerDetails : {
-                            fullName : 1,
-                            username : 1,
-                            "avatar.url" : 1
-                        }
+                    },
+                    ownerDetails : {
+                        fullName : 1,
+                        username : 1,
+                        "avatar.url" : 1
                     }
                 }
             }
         ]
     );
 
+    
     return res
     .status(200)
     .json(
